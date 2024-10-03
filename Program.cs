@@ -1,6 +1,5 @@
 ﻿using LinkedinPostCarousel;
 
-
 // How to generate a token:
 // - Go to https://www.linkedin.com/developers/tools/oauth/token-generator
 // - Select the app you want to use
@@ -10,10 +9,13 @@
 
 string token = "<TO-CONFIGURE>";
 
-
 var api = new LinkedinApi(token);
 
 LinkedinApi.UserInfo userInfo = await api.GetUserInfo(CancellationToken.None);
+
+// Here we post as user. If the user is admin of an organization, we could get 
+// the organization urn (using https://api.linkedin.com/v2/organizationAcls?q=roleAssignee)
+// and post on behalf of the organization.
 
 string urn = $"urn:li:person:{userInfo.sub}";
 
