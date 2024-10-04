@@ -21,12 +21,31 @@ string urn = $"urn:li:person:{userInfo.sub}";
 
 Console.WriteLine($"User URN: {urn}");
 
-var document = File.OpenRead("./test_carousel.pdf");
+var images = new[]
+{
+    "./images/image1.jpg",
+    "./images/image2.jpg",
+    "./images/image3.jpg",
+    "./images/image4.jpg"
+};
 
-var documentId = await api.UploadDocument(urn, document, CancellationToken.None);
+using (SKDocument pdfDocument = SKDocument.CreatePdf("carousel.pdf"))
+{
+    foreach (var path in images)
+    {
+        using SKBitmap bitmap = SKBitmap.Decode(path);
+        using SKCanvas pageCanvas = pdfDocument.BeginPage(bitmap.Width, bitmap.Height);
+        pageCanvas.DrawBitmap(bitmap, new SKRect(0, 0, bitmap.Width, bitmap.Height));
+        pdfDocument.EndPage();
+    }
 
-Console.WriteLine($"Document: {documentId}");
+    pdfDocument.Close();
+}
 
+
+var document = File.OpenRead("carousel.pdf");
+ var documentId = await api.UploadDocument(urn, document, CancellationToken.None);
+ Console.WriteLine($"Document: {documentId}");
 await api.CreateCarousel(urn, "Test Carousel", "Document", documentId, PostCreationStatus.PUBLISHED, CancellationToken.None);
 
 Console.WriteLine("Post created!");

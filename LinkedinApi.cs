@@ -53,6 +53,29 @@ public class LinkedinApi
         
         return startUploadResponseContent.value.Document;
     }
+    
+    public async Task<string> UploadPicture(string userUrn, Stream document, CancellationToken cancellationToken)
+    {
+        // Get url to upload document
+        var startUploadRequest = new
+        {
+            initializeUploadRequest = new
+            {
+                owner = userUrn
+            }
+        };
+        
+        var startUploadResponse = await _client.PostAsJsonAsync("rest/images?action=initializeUpload", startUploadRequest, cancellationToken);
+        startUploadResponse.EnsureSuccessStatusCode();
+        var startUploadResponseContent = await startUploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>(cancellationToken);
+        
+        // Upload file
+        var uploadResponse = await _client.PostAsync(startUploadResponseContent.value.UploadUrl,
+            new StreamContent(document), cancellationToken);
+        uploadResponse.EnsureSuccessStatusCode();
+        
+        return startUploadResponseContent.value.Image;
+    }
 
     public async Task CreateCarousel(string userUrn, string title, string documentTitle, string documentId, PostCreationStatus status, CancellationToken cancellationToken)
     {
@@ -83,10 +106,43 @@ public class LinkedinApi
         var response = await _client.PostAsJsonAsync("rest/posts", requestJson, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
+    
+    public async Task CreateMultiImage(string userUrn, string title, string[] ids, PostCreationStatus status, CancellationToken cancellationToken)
+    {
+        var requestJson = new
+        {
+            author = userUrn,
+            commentary = title,
+            visibility = "PUBLIC",
+            distribution = new
+            {
+                feedDistribution = "MAIN_FEED",
+                targetEntities = new string[] { },
+                thirdPartyDistributionChannels = new string[] { }
+            },
+            content = new
+            {
+                multiImage = new
+                {
+                    images = ids.Select(id =>  new { id = id }).ToArray()
+                }
+            },
+            lifecycleState = status.ToString(),
+            isReshareDisabledByAuthor = false
+        };
+
+
+        var response = await _client.PostAsJsonAsync("rest/posts", requestJson, cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
 
     record UploadDocumentResponse(UploadDocumentResponseValue value);
 
     record UploadDocumentResponseValue(string UploadUrl, string Document);
+    
+    record UploadImageResponse(UploadImageResponseValue value);
+
+    record UploadImageResponseValue(string UploadUrl, string Image);
     
     public record UserInfo(string sub, string email, string name, bool email_verified, string given_name, string family_name);
 }
